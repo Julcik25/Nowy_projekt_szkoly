@@ -3,35 +3,315 @@ import tkintermapview
 
 root = Tk()
 root.geometry("1200x700")
-root.title("Mapa szkół")
+root.title("Zarządzanie szkołami w mieście, uczniami i pracownikami")
 
 
-ramka_lista_obiektow=Frame(root)
+#SZKOLY
+schools: list =[]
+
+class School:
+    def __init__(self, rodzaj, numer, miejscowosc):
+        self.rodzaj = rodzaj
+        self.numer = numer
+        self.miejscowosc = miejscowosc
+        self.coordinates = self.get_coordinates()
+        self.marker = map_widget.set_marker(self.coordinates[0], self.coordinates[1], text=f'{self.rodzaj} {self.numer}')
+        self.employees = []
+        self.students = []
+
+    def get_coordinates(self)-> list:
+        import requests
+        from bs4 import BeautifulSoup
+        adres_url = f'https://pl.wikipedia.org/wiki/{self.miejscowosc}'
+        response_html = BeautifulSoup(requests.get(adres_url).text, 'html.parser')
+        return [
+            float(response_html.select('.latitude')[1].text.replace(',', '.')),
+            float(response_html.select('.longitude')[1].text.replace(',', '.'))
+        ]
+
+
+
+#SZKOLY
+def add_school()->None:
+    rodzaj = entry_rodzaj_szkoly.get()
+    numer = entry_numer_szkoly.get()
+    miejscowosc = entry_szkola_miejscowosc.get()
+
+    new_school = School(rodzaj=rodzaj, numer=numer, miejscowosc=miejscowosc)
+    schools.append(new_school)
+    print(schools)
+
+    entry_rodzaj_szkoly.delete(0, END)
+    entry_numer_szkoly.delete(0, END)
+    entry_szkola_miejscowosc.delete(0, END)
+
+    entry_rodzaj_szkoly.focus()
+    show_schools()
+
+
+def show_schools():
+    listbox_lista_obiektow.delete(0,END)
+    for idx,school in enumerate(schools):
+        listbox_lista_obiektow.insert(idx, f'{idx+1}. {school.rodzaj} {school.numer}')
+
+
+def delete_school():
+    i = listbox_lista_obiektow.index(ACTIVE)
+    print(i)
+    schools[i].marker.delete()
+    schools.pop(i)
+    show_schools()
+
+
+def edit_school():
+    i = listbox_lista_obiektow.index(ACTIVE)
+    school = schools[i]
+    entry_rodzaj_szkoly.insert(0, school.rodzaj)
+    entry_numer_szkoly.insert(0, school.numer)
+    entry_szkola_miejscowosc.insert(0, school.miejscowosc)
+    button_dodaj_szkole.config(text="Zapisz", command=lambda: update_school(i))
+
+
+def update_school(i):
+    rodzaj = entry_rodzaj_szkoly.get()
+    numer = entry_numer_szkoly.get()
+    miejscowosc = entry_szkola_miejscowosc.get()
+
+    schools[i].rodzaj = rodzaj
+    schools[i].numer = numer
+    schools[i].miejscowosc = miejscowosc
+    schools[i].coordinates = schools[i].get_coordinates()
+    schools[i].marker.delete()
+    schools[i].marker = map_widget.set_marker(schools[i].coordinates[0], schools[i].coordinates[1], text=f'{rodzaj} {numer}')
+
+    entry_rodzaj_szkoly.delete(0, END)
+    entry_numer_szkoly.delete(0, END)
+    entry_szkola_miejscowosc.delete(0, END)
+    button_dodaj_szkole.config(text="Dodaj szkołę", command=add_school)
+
+
+def show_school_details():
+    i = listbox_lista_obiektow.index(ACTIVE)
+    label_szczegoly_szkola_rodzaj_wartosc.config(text=schools[i].rodzaj)
+    label_szczegoly_szkola_numer_wartosc.config(text=schools[i].numer)
+    label_szczegoly_szkola_miejscowosc_wartosc.config(text=schools[i].miejscowosc)
+
+    map_widget.set_zoom(15)
+    map_widget.set_position(schools[i].coordinates[0], schools[i].coordinates[1])
+
+
+
+#PRACOWNICY
+employees: list = []
+
+class Employee:
+    def __init__(self, imie, nazwisko, stanowisko):
+        self.imie = imie
+        self.nazwisko = nazwisko
+        self.stanowisko = stanowisko
+
+
+def add_employee():
+    imie = entry_pracownik_imie.get()
+    nazwisko = entry_pracownik_nazwisko.get()
+    stanowisko = entry_pracownik_stanowisko.get()
+
+    new_employee = Employee(imie=imie, nazwisko=nazwisko, stanowisko=stanowisko)
+    employees.append(new_employee)
+    print(employees)
+
+    entry_pracownik_imie.delete(0, END)
+    entry_pracownik_nazwisko.delete(0, END)
+    entry_pracownik_stanowisko.delete(0, END)
+
+    entry_pracownik_imie.focus()
+
+    show_employees()
+
+def show_employees():
+    listbox_lista_pracownikow.delete(0, END)
+    for idx, employee in enumerate(employees):
+        listbox_lista_pracownikow.insert(idx, f'{idx+1}. {employee.imie} {employee.nazwisko} {employee.stanowisko}')
+
+
+def delete_employee():
+    i = listbox_lista_pracownikow.index(ACTIVE)
+    employees.pop(i)
+    show_employees()
+
+
+def edit_employee():
+    i = listbox_lista_pracownikow.index(ACTIVE)
+    Employee = employees[i]
+    entry_pracownik_imie.insert(0, Employee.imie)
+    entry_pracownik_nazwisko.insert(0, Employee.nazwisko)
+    entry_pracownik_stanowisko.insert(0, Employee.stanowisko)
+    button_dodaj_pracownika.config(text="Zapisz", command=lambda: update_employee(i))
+
+
+def update_employee(i):
+    imie = entry_pracownik_imie.get()
+    nazwisko = entry_pracownik_nazwisko.get()
+    stanowisko = entry_pracownik_stanowisko.get()
+
+    employees[i].imie = imie
+    employees[i].nazwisko = nazwisko
+    employees[i].stanowisko = stanowisko
+
+    entry_pracownik_imie.delete(0, END)
+    entry_pracownik_nazwisko.delete(0, END)
+    entry_pracownik_stanowisko.delete(0, END)
+
+    button_dodaj_pracownika.config(text="Dodaj pracownika", command=add_employee)
+    show_employees()
+
+
+
+#UCZNIOWIE
+students: list =[]
+
+class Student:
+    def __init__(self, imie, nazwisko, klasa):
+        self.imie = imie
+        self.nazwisko = nazwisko
+        self.klasa = klasa
+
+
+def add_student():
+    imie = entry_uczen_imie.get()
+    nazwisko = entry_uczen_nazwisko.get()
+    klasa = entry_uczen_klasa.get()
+
+    new_student = Student(imie=imie, nazwisko=nazwisko, klasa=klasa)
+    students.append(new_student)
+    print(students)
+
+    entry_uczen_imie.delete(0, END)
+    entry_uczen_nazwisko.delete(0, END)
+    entry_uczen_klasa.delete(0, END)
+
+    entry_uczen_imie.focus()
+    show_students()
+
+
+def show_students():
+    listbox_lista_uczniow.delete(0, END)
+    for idx, student in enumerate(students):
+        listbox_lista_uczniow.insert(idx, f'{idx+1}. {student.imie} {student.nazwisko} ({student.klasa})')
+
+
+def delete_student():
+    i = listbox_lista_uczniow.index(ACTIVE)
+    students.pop(i)
+    show_students()
+
+
+def edit_student():
+    i = listbox_lista_uczniow.index(ACTIVE)
+    Student = students[i]
+    entry_uczen_imie.insert(0, Student.imie)
+    entry_uczen_nazwisko.insert(0, Student.nazwisko)
+    entry_uczen_klasa.insert(0, Student.klasa)
+    button_dodaj_ucznia.config(text="Zapisz", command=lambda: update_student(i))
+
+
+def update_student(i):
+    imie = entry_uczen_imie.get()
+    nazwisko = entry_uczen_nazwisko.get()
+    klasa = entry_uczen_klasa.get()
+
+    students[i].imie = imie
+    students[i].nazwisko = nazwisko
+    students[i].klasa = klasa
+
+    entry_uczen_imie.delete(0, END)
+    entry_uczen_nazwisko.delete(0, END)
+    entry_uczen_klasa.delete(0, END)
+
+    button_dodaj_ucznia.config(text="Dodaj ucznia", command=add_student)
+    show_students()
+
+
+
+def pokaz_formularz_szkola():
+    ramka_szkola.grid(row=1, column=0, columnspan=3)
+    ramka_pracownik.grid_forget()
+    ramka_uczen.grid_forget()
+
+def pokaz_formularz_pracownik():
+    ramka_pracownik.grid(row=1, column=0, columnspan=3)
+    ramka_szkola.grid_forget()
+    ramka_uczen.grid_forget()
+
+def pokaz_formularz_uczen():
+    ramka_uczen.grid(row=1, column=0, columnspan=3)
+    ramka_szkola.grid_forget()
+    ramka_pracownik.grid_forget()
+
+
+def pokaz_szczegoly_szkola():
+    ramka_szczegoly_szkola.grid(row=0, column=0)
+    ramka_szczegoly_pracownik.grid_forget()
+    ramka_szczegoly_uczen.grid_forget()
+
+def pokaz_szczegoly_pracownik():
+    ramka_szczegoly_pracownik.grid(row=0, column=0)
+    ramka_szczegoly_szkola.grid_forget()
+    ramka_szczegoly_uczen.grid_forget()
+
+def pokaz_szczegoly_uczen():
+    ramka_szczegoly_uczen.grid(row=0, column=0)
+    ramka_szczegoly_szkola.grid_forget()
+    ramka_szczegoly_pracownik.grid_forget()
+
+
+
+# RAMKI
+ramka_lista_szkol=Frame(root)
 ramka_formularz=Frame(root)
 ramka_szczegoly_obiektow=Frame(root)
 ramka_mapa=Frame(root)
 
-ramka_lista_obiektow.grid(row=0, column=0)
+ramka_lista_szkol.grid(row=0, column=0)
 ramka_formularz.grid(row=0, column=1)
 ramka_szczegoly_obiektow.grid(row=1, column=0, columnspan=2)
 ramka_mapa.grid(row=2, column=0, columnspan=2)
 
 
-# ramka_lista_obiektow
-label_lista_obiektow=Label(ramka_lista_obiektow, text="Lista:")
-label_lista_obiektow.grid(row=0, column=0)
 
-listbox_lista_obiektow=Listbox(ramka_lista_obiektow, width=50, height=10)
+# ramka_lista_obiektow
+label_lista_szkol=Label(ramka_lista_szkol, text="Lista szkół:")
+label_lista_szkol.grid(row=0, column=0)
+
+listbox_lista_obiektow=Listbox(ramka_lista_szkol, width=50, height=10)
 listbox_lista_obiektow.grid(row=1, column=0, columnspan=3)
 
-button_pokaz_szczegoly=Button(ramka_lista_obiektow, text='Pokaż szczegóły')
+button_pokaz_szczegoly=Button(ramka_lista_szkol, text='Pokaż szczegóły', command=show_school_details)
 button_pokaz_szczegoly.grid(row=2, column=0)
 
-button_usun_obiekt=Button(ramka_lista_obiektow, text='Usuń')
+button_usun_obiekt=Button(ramka_lista_szkol, text='Usuń', command=delete_school)
 button_usun_obiekt.grid(row=2, column=1)
 
-button_edytuj_obiekt=Button(ramka_lista_obiektow, text='Edytuj')
+button_edytuj_obiekt=Button(ramka_lista_szkol, text='Edytuj', command=edit_school)
 button_edytuj_obiekt.grid(row=2, column=2)
+
+
+
+label_pracownicy = Label(ramka_szczegoly_obiektow, text="Pracownicy szkoły:")
+label_pracownicy.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+
+label_uczniowie = Label(ramka_szczegoly_obiektow, text="Uczniowie szkoły:")
+label_uczniowie.grid(row=0, column=1, padx=10, pady=5, sticky="w")
+
+listbox_lista_pracownikow = Listbox(ramka_szczegoly_obiektow, width=40, height=8)
+listbox_lista_pracownikow.grid(row=1, column=0, padx=10)
+
+listbox_lista_uczniow = Listbox(ramka_szczegoly_obiektow, width=40, height=8)
+listbox_lista_uczniow.grid(row=1, column=1, padx=10)
+
+
+
+
 
 
 
@@ -40,18 +320,18 @@ ramka_szkola = Frame(ramka_formularz)
 ramka_pracownik = Frame(ramka_formularz)
 ramka_uczen = Frame(ramka_formularz)
 
-button_formularz_szkola = Button(ramka_formularz, text="Formularz szkoły")
+button_formularz_szkola = Button(ramka_formularz, text="Formularz szkoły", command=pokaz_formularz_szkola)
 button_formularz_szkola.grid(row=0, column=0)
 
-button_formularz_pracownik = Button(ramka_formularz, text="Formularz pracownika")
+button_formularz_pracownik = Button(ramka_formularz, text="Formularz pracownika", command=pokaz_formularz_pracownik)
 button_formularz_pracownik.grid(row=0, column=1)
 
-button_formularz_uczen = Button(ramka_formularz, text="Formularz ucznia")
+button_formularz_uczen = Button(ramka_formularz, text="Formularz ucznia", command=pokaz_formularz_uczen)
 button_formularz_uczen.grid(row=0, column=2)
 
 
 
-#formularz_szkoly
+# Formularz szkoły
 label_rodzaj_szkoly = Label(ramka_szkola, text="Rodzaj szkoły:")
 label_rodzaj_szkoly.grid(row=0, column=0, sticky=W)
 entry_rodzaj_szkoly = Entry(ramka_szkola)
@@ -67,8 +347,8 @@ label_szkola_miejscowosc.grid(row=2, column=0, sticky=W)
 entry_szkola_miejscowosc = Entry(ramka_szkola)
 entry_szkola_miejscowosc.grid(row=2, column=1)
 
-button_dodaj_szkole = Button(ramka_szkola, text="Dodaj szkołę")
-button_dodaj_szkole.grid(row=2, column=0, columnspan=2)
+button_dodaj_szkole = Button(ramka_szkola, text="Dodaj szkołę", command=add_school)
+button_dodaj_szkole.grid(row=3, column=0, columnspan=2)
 
 
 
@@ -88,7 +368,7 @@ label_pracownik_stanowisko.grid(row=2, column=0, sticky=W)
 entry_pracownik_stanowisko = Entry(ramka_pracownik)
 entry_pracownik_stanowisko.grid(row=2, column=1)
 
-button_dodaj_pracownika = Button(ramka_pracownik, text="Dodaj pracownika")
+button_dodaj_pracownika = Button(ramka_pracownik, text="Dodaj pracownika", command=add_employee)
 button_dodaj_pracownika.grid(row=3, column=0, columnspan=2)
 
 
@@ -109,7 +389,7 @@ label_uczen_klasa.grid(row=2, column=0, sticky=W)
 entry_uczen_klasa = Entry(ramka_uczen)
 entry_uczen_klasa.grid(row=2, column=1)
 
-button_dodaj_ucznia = Button(ramka_uczen, text="Dodaj ucznia")
+button_dodaj_ucznia = Button(ramka_uczen, text="Dodaj ucznia", command=add_student)
 button_dodaj_ucznia.grid(row=4, column=0, columnspan=2)
 
 
@@ -191,10 +471,6 @@ label_szczegoly_uczen_klasa.grid(row=1, column=4)
 label_szczegoly_uczen_klasa_wartosc = Label(ramka_szczegoly_uczen, text="....")
 label_szczegoly_uczen_klasa_wartosc.grid(row=1, column=5)
 
-
-
-# Pokaż tylko szczegóły szkoły na start
-ramka_szczegoly_szkola.grid(row=0, column=0)
 
 
 
